@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+
+// API URL configuration
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 function Analytics() {
   const [analytics, setAnalytics] = useState(null);
@@ -10,24 +13,16 @@ function Analytics() {
   const token = localStorage.getItem('token');
   const isLoggedIn = !!token;
 
-  useEffect(() => {
-    if (isLoggedIn) {
-      fetchAnalytics();
-    } else {
-      setLoading(false);
-    }
-  }, [isLoggedIn]);
-
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
     try {
       const [overviewRes, streakRes, categoryRes] = await Promise.all([
-        axios.get('http://localhost:5000/api/analytics/overview', {
+        axios.get(`${API_URL}/api/analytics/overview`, {
           headers: { 'Authorization': `Bearer ${token}` }
         }),
-        axios.get('http://localhost:5000/api/analytics/streak', {
+        axios.get(`${API_URL}/api/analytics/streak`, {
           headers: { 'Authorization': `Bearer ${token}` }
         }),
-        axios.get('http://localhost:5000/api/analytics/by-category', {
+        axios.get(`${API_URL}/api/analytics/by-category`, {
           headers: { 'Authorization': `Bearer ${token}` }
         })
       ]);
@@ -40,7 +35,15 @@ function Analytics() {
       console.error('Error fetching analytics:', err);
       setLoading(false);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      fetchAnalytics();
+    } else {
+      setLoading(false);
+    }
+  }, [isLoggedIn, fetchAnalytics]);
 
   const getCategoryColor = (category) => {
     const colors = {

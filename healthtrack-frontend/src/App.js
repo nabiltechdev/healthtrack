@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import axios from 'axios';
 import { ThemeProvider } from './context/ThemeContext';
@@ -11,28 +11,16 @@ import Contact from './pages/Contact';
 import Dashboard from './pages/Dashboard';
 import Analytics from './pages/Analytics';
 
+// API URL configuration - uses environment variable or defaults to localhost
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [activities, setActivities] = useState([]);
 
-  useEffect(() => {
-    // Check for stored token on app load
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-      setIsLoggedIn(true);
-      
-      // Fetch activities with stored token
-      fetchActivities(storedToken);
-    }
-  }, []);
-
-  const fetchActivities = async (authToken, filters = {}) => {
+  const fetchActivities = useCallback(async (authToken, filters = {}) => {
     try {
       // Build query string from filters
       const queryParams = new URLSearchParams();
@@ -44,7 +32,7 @@ function App() {
       if (filters.order) queryParams.append('order', filters.order);
       
       const queryString = queryParams.toString();
-      const url = `http://localhost:5000/api/activities${queryString ? '?' + queryString : ''}`;
+      const url = `${API_URL}/api/activities${queryString ? '?' + queryString : ''}`;
       
       const activitiesRes = await axios.get(url, {
         headers: {
@@ -59,11 +47,26 @@ function App() {
         handleLogout();
       }
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // Check for stored token on app load
+    const storedToken = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+    
+    if (storedToken && storedUser) {
+      setToken(storedToken);
+      setUser(JSON.parse(storedUser));
+      setIsLoggedIn(true);
+      
+      // Fetch activities with stored token
+      fetchActivities(storedToken);
+    }
+  }, [fetchActivities]);
 
   const handleLogin = async (email, password) => {
     try {
-      const res = await axios.post('http://localhost:5000/api/login', { email, password });
+      const res = await axios.post(`${API_URL}/api/login`, { email, password });
       if (res.data.isNew) {
         alert('New user created! Welcome.');
       }
@@ -97,7 +100,7 @@ function App() {
 
   const addActivity = async (activity) => {
     try {
-      const res = await axios.post('http://localhost:5000/api/activities', activity, {
+      const res = await axios.post(`${API_URL}/api/activities`, activity, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -116,7 +119,7 @@ function App() {
 
   const editActivity = async (id, updatedData) => {
     try {
-      const res = await axios.put(`http://localhost:5000/api/activities/${id}`, updatedData, {
+      const res = await axios.put(`${API_URL}/api/activities/${id}`, updatedData, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -140,7 +143,7 @@ function App() {
 
   const deleteActivity = async (id) => {
     try {
-      await axios.delete(`http://localhost:5000/api/activities/${id}`, {
+      await axios.delete(`${API_URL}/api/activities/${id}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

@@ -9,40 +9,43 @@ const authenticateToken = require('./middleware/auth');
 
 const app = express();
 
-// CORS configuration for Railway deployment
+// ===== CORS Configuration =====
 const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:5000',
-  process.env.FRONTEND_URL,
-  // Railway will provide these URLs
-].filter(Boolean);
+  'http://localhost:3000', // React dev
+  'http://localhost:5000', // backend dev
+  'https://healthtrack-dun.vercel.app' // Vercel frontend
+];
 
 app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (mobile apps, Postman, etc.)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1 || origin.includes('railway.app')) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: [
+    'http://localhost:3000',
+    'https://healthtrack-dun.vercel.app'
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+// Handle preflight OPTIONS requests globally
+app.options('*', cors({
+  origin: allowedOrigins,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
 
-app.use(express.json());
+// ===== Middleware =====
+app.use(express.json()); // parse JSON body
 
-// Health check endpoint for Railway
+// ===== Health check =====
 app.get('/health', (req, res) => {
   res.status(200).json({ 
-    status: 'healthy', 
+    status: 'healthy',
     timestamp: new Date().toISOString(),
     service: 'healthtrack-backend'
   });
 });
 
-// Root endpoint
+// ===== Root endpoint =====
 app.get('/', (req, res) => {
   res.json({ 
     message: 'HealthTrack API is running',
@@ -57,25 +60,35 @@ app.get('/', (req, res) => {
   });
 });
 
-// Register all routes
+// ===== Routes =====
 app.use('/api', authRoutes);
 app.use('/api', activityRoutes);
 app.use('/api', analyticsRoutes);
-app.use('/api/admin', authenticateToken, adminRoutes);
+// app.use('/api/admin', authenticateToken, adminRoutes);
 
-// Error handling middleware
+// ===== Error handling =====
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ 
     error: 'Something went wrong!',
-    message: err.message 
+    message: err.message
   });
 });
 
-// 404 handler
+// ===== 404 handler =====
 app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
+// ===== Start server =====
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+
+process.on("uncaughtException", (err) => {
+  console.error("🔥 UNCAUGHT EXCEPTION:", err);
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("🔥 UNHANDLED REJECTION:", reason);
+});

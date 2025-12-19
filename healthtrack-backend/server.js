@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+
 const authRoutes = require('./routes/auth');
 const activityRoutes = require('./routes/activities');
 const analyticsRoutes = require('./routes/analytics');
@@ -9,81 +10,49 @@ const authenticateToken = require('./middleware/auth');
 
 const app = express();
 
-// ===== CORS Configuration =====
-const allowedOrigins = [
-  'http://localhost:3000', // React dev
-  'http://localhost:5000', // backend dev
-  'https://healthtrack-dun.vercel.app' // Vercel frontend
-];
-
+/* ===== CORS (SAFE FOR EXPRESS 5) ===== */
 app.use(cors({
   origin: [
     'http://localhost:3000',
     'https://healthtrack-dun.vercel.app'
   ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
 
+/* ===== Middleware ===== */
+app.use(express.json());
 
-
-// ===== Middleware =====
-app.use(express.json()); // parse JSON body
-
-// ===== Health check =====
+/* ===== Health ===== */
 app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    service: 'healthtrack-backend'
-  });
+  res.json({ status: 'ok' });
 });
 
-// ===== Root endpoint =====
+/* ===== Root ===== */
 app.get('/', (req, res) => {
-  res.json({ 
-    message: 'HealthTrack API is running',
-    version: '2.0.0',
-    endpoints: {
-      health: '/health',
-      auth: '/api/login, /api/register',
-      activities: '/api/activities',
-      analytics: '/api/analytics',
-      admin: '/api/admin'
-    }
-  });
+  res.json({ message: 'HealthTrack API running' });
 });
 
-// ===== Routes =====
+/* ===== Routes ===== */
 app.use('/api', authRoutes);
 app.use('/api', activityRoutes);
 app.use('/api', analyticsRoutes);
-// app.use('/api/admin', authenticateToken, adminRoutes);
+app.use('/api/admin', authenticateToken, adminRoutes);
 
-// ===== Error handling =====
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ 
-    error: 'Something went wrong!',
-    message: err.message
-  });
-});
-
-// ===== 404 handler =====
+/* ===== 404 (NO STAR) ===== */
 app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// ===== Start server =====
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
-
-process.on("uncaughtException", (err) => {
-  console.error("🔥 UNCAUGHT EXCEPTION:", err);
+/* ===== Crash visibility ===== */
+process.on('uncaughtException', (err) => {
+  console.error('🔥 Uncaught Exception:', err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('🔥 Unhandled Rejection:', reason);
 });
 
-process.on("unhandledRejection", (reason, promise) => {
-  console.error("🔥 UNHANDLED REJECTION:", reason);
+/* ===== Start ===== */
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
